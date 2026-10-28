@@ -5,3 +5,5 @@
 *.out
 .claude/yessir.local.json
 .claude/settings.local.json
+/dist-bin/
+/npm/dist/

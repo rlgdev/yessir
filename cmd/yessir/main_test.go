@@ -183,6 +183,20 @@ func TestHookNeverFailsOnGarbage(t *testing.T) {
 	}
 }
 
+func TestTransientInstall(t *testing.T) {
+	for p, want := range map[string]bool{
+		`C:\Users\me\AppData\Local\npm-cache\_npx\1a2b\node_modules\@rlgdev\yessir-win32-x64\bin\yessir.exe`: true,
+		`/Users/me/.npm/_npx/1a2b/node_modules/@rlgdev/yessir-darwin-arm64/bin/yessir`:                       true,
+		`C:\Users\me\AppData\Roaming\npm\node_modules\@rlgdev\yessir-win32-x64\bin\yessir.exe`:               false,
+		`C:\Users\me\.yessir\bin\yessir.exe`:                                                                 false,
+		`/usr/local/lib/node_modules/@rlgdev/yessir-linux-x64/bin/yessir`:                                    false,
+	} {
+		if got := transientInstall(p); got != want {
+			t.Errorf("%s: got %v want %v", p, got, want)
+		}
+	}
+}
+
 func TestUsage(t *testing.T) {
 	sandbox(t)
 	if code, _, _ := cli(t, ""); code != exitUsage {

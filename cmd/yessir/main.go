@@ -209,6 +209,18 @@ func hookCommand() (string, error) {
 
 func backupDir() string { return filepath.Join(config.Dir(), "backup") }
 
+// transientInstall reports whether exe lives in a cache that npx or a package
+// runner may delete (npm's _npx dir, pnpm dlx, bunx).
+func transientInstall(exe string) bool {
+	p := strings.ToLower(strings.ReplaceAll(exe, `\`, "/"))
+	for _, marker := range []string{"/_npx/", "/npm-cache/", "/.pnpm-store/", "/dlx-", "/bunx-"} {
+		if strings.Contains(p, marker) {
+			return true
+		}
+	}
+	return false
+}
+
 // ---------------------------------------------------------------- on
 
 func cmdOn(args []string, stdout, stderr io.Writer) int {
@@ -241,6 +253,13 @@ func cmdOn(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		fmt.Fprintln(stderr, "yessir:", err)
 		return exitFiles
+	}
+
+	if transientInstall(cmd) && !*force {
+		fmt.Fprintln(stderr, "yessir: this copy runs from npm's npx cache:\n  "+cmd+
+			"\nThe hook would point there and break when the cache is cleaned. Install it permanently first:\n"+
+			"  npm install -g @rlgdev/yessir\nthen run `yessir on` again (or pass --force to register this path anyway).")
+		return exitUsage
 	}
 
 	rep := doctor.Run(user, sc.root, cmd)

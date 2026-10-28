@@ -1,0 +1,82 @@
+name: npm
+
+# Publishes @rlgdev/yessir and its six platform packages to npm.
+# Runs automatically after each release (called from release.yml) and can be
+# started by hand for an existing tag: Actions → npm → Run workflow → version.
+# Needs the repository secret NPM_TOKEN (an npm "automation" token); without it
+# the job only builds and packs, and says so.
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+    secrets:
+      NPM_TOKEN:
+        required: false
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, without the v (the tag v<version> must exist)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ inputs.version }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Build binaries
+        run: |
+          set -euo pipefail
+          mkdir -p dist-bin
+          for t in windows/amd64 windows/arm64 darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
+            os=${t%/*}; arch=${t#*/}; ext=""; [ "$os" = windows ] && ext=".exe"
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath \
+              -ldflags "-s -w -X main.version=${VERSION}" \
+              -o "dist-bin/yessir-$os-$arch$ext" ./cmd/yessir
+          done
+          ls -la dist-bin
+
+      - name: Assemble packages
+        run: node npm/build.mjs --version "$VERSION" --bin-dir dist-bin --out npm/dist
+
+      - name: Pack (always) and publish (when NPM_TOKEN is set)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          # platform packages first, the launcher package last
+          dirs=$(ls -d npm/dist/yessir-*/) ; dirs="$dirs npm/dist/yessir/"
+          for d in $dirs; do
+            name=$(node -p "require('./$d/package.json').name")
+            if [ -z "${NODE_AUTH_TOKEN}" ]; then
+              (cd "$d" && npm pack --dry-run)
+              continue
+            fi
+            if npm view "$name@$VERSION" version >/dev/null 2>&1; then
+              echo "$name@$VERSION already on npm, skipping"
+              continue
+            fi
+            (cd "$d" && npm publish --access public --provenance)
+          done
+          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+            echo "::warning::NPM_TOKEN secret not set — packages were built and packed but not published."
+          fi

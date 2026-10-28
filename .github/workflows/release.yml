@@ -15,6 +15,9 @@ permissions:
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.out.outputs.released }}
+      version: ${{ steps.out.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,3 +55,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: ${{ steps.tag.outputs.tag || github.ref_name }}
+
+      - name: Outputs for the npm job
+        id: out
+        if: always()
+        run: |
+          tag="${{ steps.tag.outputs.tag || github.ref_name }}"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.tag.outputs.skip }}" = "true" ]; then echo "released=false"; else echo "released=true"; fi >> "$GITHUB_OUTPUT"
+
+  npm:
+    needs: goreleaser
+    if: needs.goreleaser.outputs.released == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/npm.yml
+    with:
+      version: ${{ needs.goreleaser.outputs.version }}
+    secrets: inherit

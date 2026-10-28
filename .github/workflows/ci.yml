@@ -41,6 +41,24 @@ jobs:
           $exe status
           $exe uninstall
 
+  npm-package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: build, pack, unpack and run the npm launcher
+        shell: bash
+        run: scripts/npm-smoke.sh
+
   gofmt:
     runs-on: ubuntu-latest
     steps:

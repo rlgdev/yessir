@@ -22,6 +22,14 @@ irm https://raw.githubusercontent.com/rlgdev/yessir/main/scripts/install.ps1 | i
 curl -fsSL https://raw.githubusercontent.com/rlgdev/yessir/main/scripts/install.sh | sh
 ```
 
+**npm** (any OS; works behind corporate proxies that only let the npm registry through)
+
+```bash
+npm install -g @rlgdev/yessir
+```
+
+The package ships the native binary for your platform as an optional dependency (`@rlgdev/yessir-win32-x64`, `-darwin-arm64`, …); nothing is downloaded from GitHub at install time, and Node is not involved when the hook runs. Install globally — `yessir on` refuses to register a copy run through `npx`, because npm's cache can disappear under it. Don't install with `--omit=optional`.
+
 **From source** (Go 1.24+)
 
 ```bash
@@ -102,6 +110,8 @@ go build ./cmd/yessir
 printf '{"hook_event_name":"PermissionRequest","tool_name":"Bash","cwd":"%s","tool_input":{"command":"ls"}}' "$PWD" | ./yessir hook
 ```
 
-`testdata/permission-request/` holds captured payloads; `cmd/yessir/main_test.go` runs the whole on → hook → off → uninstall lifecycle in a temp home. Design: [SPEC.md](SPEC.md).
+`testdata/permission-request/` holds captured payloads; `cmd/yessir/main_test.go` runs the whole on → hook → off → uninstall lifecycle in a temp home. `scripts/npm-smoke.sh` builds, packs and runs the npm launcher for your platform. Design: [SPEC.md](SPEC.md).
+
+Releasing: bump `VERSION` on main. The release workflow tags it, publishes the GitHub release (GoReleaser) and then the npm packages (`.github/workflows/npm.yml`, needs the `NPM_TOKEN` secret; it can also be run by hand for an existing tag).
 
 MIT © rlgdev
