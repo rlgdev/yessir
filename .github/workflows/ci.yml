@@ -41,6 +41,20 @@ jobs:
           $exe status
           $exe uninstall
 
+  install-from-source:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+      - name: run scripts/install-from-source.ps1 like a user would (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\install-from-source.ps1 -Dest "$env:RUNNER_TEMP\ybin" -NoPath
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          & "$env:RUNNER_TEMP\ybin\yessir.exe" version
+
   npm-package:
     strategy:
       fail-fast: false

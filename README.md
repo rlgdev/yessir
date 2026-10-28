@@ -30,7 +30,47 @@ npm install -g @rlgdev/yessir
 
 The package ships the native binary for your platform as an optional dependency (`@rlgdev/yessir-win32-x64`, `-darwin-arm64`, …); nothing is downloaded from GitHub at install time, and Node is not involved when the hook runs. Install globally — `yessir on` refuses to register a copy run through `npx`, because npm's cache can disappear under it. Don't install with `--omit=optional`.
 
-**From source** (Go 1.24+)
+**From the source ZIP** (when release downloads are blocked)
+
+You need [Go](https://go.dev/dl/) 1.21 or newer: the `.msi` installs without admin rights if you choose "install for me only", or run `winget install GoLang.Go`. yessir uses only Go's standard library, so the build downloads nothing.
+
+1. On https://github.com/rlgdev/yessir click **Code → Download ZIP** and unzip it, e.g. to `C:\src\yessir-main`.
+2. In PowerShell, from the unzipped folder:
+
+   ```powershell
+   cd C:\src\yessir-main
+   powershell -ExecutionPolicy Bypass -File .\scripts\install-from-source.ps1
+   ```
+
+   The script builds `yessir.exe` into `%USERPROFILE%\.yessir\bin` (the hook will point there, so keep it) and adds that folder to your user PATH. Options: `-Dest <folder>` to install elsewhere, `-NoPath` to leave PATH alone.
+3. Open a new terminal, then:
+
+   ```powershell
+   yessir version     # yessir 0.1.0-src (windows/amd64)
+   yessir doctor
+   yessir on --global # or: cd <repo>; yessir on
+   ```
+
+If scripts are blocked entirely, the same build by hand:
+
+```powershell
+cd C:\src\yessir-main
+$env:GOTOOLCHAIN='local'; $env:GOPROXY='off'; $env:CGO_ENABLED='0'
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.yessir\bin" | Out-Null
+go build -trimpath -o "$env:USERPROFILE\.yessir\bin\yessir.exe" ./cmd/yessir
+& "$env:USERPROFILE\.yessir\bin\yessir.exe" version
+```
+
+To upgrade, download a fresh ZIP and run the script again (same install folder, so the hook keeps working).
+
+macOS / Linux from the source ZIP: unzip, `cd yessir-main`, then
+
+```bash
+mkdir -p ~/.yessir/bin && GOTOOLCHAIN=local GOPROXY=off CGO_ENABLED=0 go build -trimpath -o ~/.yessir/bin/yessir ./cmd/yessir
+export PATH="$HOME/.yessir/bin:$PATH"   # add to your shell profile
+```
+
+**With `go install`** (needs access to the Go module proxy or github.com)
 
 ```bash
 go install github.com/rlgdev/yessir/cmd/yessir@latest

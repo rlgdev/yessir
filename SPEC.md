@@ -202,7 +202,7 @@ Bare tool names only: `Write(...)`/`NotebookEdit(...)` path rules never match, a
 
 ## 9. Implementation
 
-- **Language**: Go 1.24, standard library only. Single static binary, < 10 ms cold start, no runtime dependency on the developer machine (Claude Code's native installer no longer guarantees Node).
+- **Language**: Go 1.21+, standard library only. Single static binary, < 10 ms cold start, no runtime dependency on the developer machine (Claude Code's native installer no longer guarantees Node).
 - **Layout**
 
 ```
