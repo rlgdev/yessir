@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - run: go vet ./...
+      - run: go test ./... -count=1
+      - run: go build -o yessir${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/yessir
+      - name: smoke — hook answers a sample payload
+        shell: bash
+        env:
+          YESSIR_HOME: ${{ runner.temp }}/yessir-home
+          CLAUDE_CONFIG_DIR: ${{ runner.temp }}/claude-home
+        run: |
+          set -euo pipefail
+          exe=./yessir; [ "$RUNNER_OS" = Windows ] && exe=./yessir.exe
+          $exe version
+          $exe on --global
+          out=$(sed "s#/home/me/work/repo#$PWD#" testdata/permission-request/bash.json | $exe hook)
+          echo "$out"
+          echo "$out" | grep -q '"behavior":"allow"'
+          out=$(sed "s#/home/me/work/repo#$PWD#" testdata/permission-request/force-push.json | $exe hook)
+          [ -z "$out" ]
+          $exe status
+          $exe uninstall
+
+  gofmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
