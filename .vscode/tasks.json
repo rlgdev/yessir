@@ -1,0 +1,42 @@
+{
+  // Terminal → Run Task… → pick one. Tasks run plain commands, so they also work
+  // where company policy blocks .ps1 files ("is not digitally signed").
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "yessir: build & install (Go already installed)",
+      "type": "process",
+      "command": "powershell.exe",
+      "windows": {
+        "args": [
+          "-NoProfile", "-Command",
+          "$ErrorActionPreference='Stop'; $env:GOTOOLCHAIN='local'; $env:GOPROXY='off'; $env:CGO_ENABLED='0'; $dest=\"$env:USERPROFILE\\.yessir\\bin\"; New-Item -ItemType Directory -Force $dest | Out-Null; $v=(Get-Content VERSION -Raw).Trim(); go build -trimpath -ldflags \"-s -w -X main.version=$v-src\" -o \"$dest\\yessir.exe\" ./cmd/yessir; if ($LASTEXITCODE) { exit $LASTEXITCODE }; $p=[Environment]::GetEnvironmentVariable('Path','User'); if (($p -split ';') -notcontains $dest) { [Environment]::SetEnvironmentVariable('Path', \"$p;$dest\", 'User'); Write-Host \"added $dest to your user PATH (restart VS Code / open a new terminal)\" }; & \"$dest\\yessir.exe\" version; & \"$dest\\yessir.exe\" doctor"
+        ]
+      },
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "yessir: install portable Go + build & install",
+      "type": "process",
+      "command": "powershell.exe",
+      "windows": {
+        "args": [
+          "-NoProfile", "-Command",
+          "& ([scriptblock]::Create((Get-Content -Raw '${workspaceFolder}\\scripts\\install-with-go.ps1')))"
+        ]
+      },
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "yessir: test",
+      "type": "shell",
+      "command": "go test ./...",
+      "options": { "cwd": "${workspaceFolder}", "env": { "GOTOOLCHAIN": "local", "GOPROXY": "off" } },
+      "problemMatcher": [],
+      "group": "test"
+    }
+  ]
+}

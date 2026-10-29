@@ -60,6 +60,16 @@ You need [Go](https://go.dev/dl/) 1.21 or newer: the `.msi` installs without adm
 
 Where scripts are allowed, `powershell -ExecutionPolicy Bypass -File .\scripts\install-from-source.ps1` does the same in one step (`-Dest <folder>`, `-NoPath`). If `yessir version` reports that the program "has been blocked by group policy", your organisation also blocks unsigned executables (AppLocker/WDAC); yessir then needs to be signed or approved by IT.
 
+**No Go on the machine?** `scripts/install-with-go.ps1` fetches the official portable Go zip from go.dev (checksum-verified, no installer, no admin), builds yessir, installs it as above and deletes the temporary Go again. Where `.ps1` files are blocked, open it in Notepad, select all, and paste it into a PowerShell window that is in the unzipped folder. If go.dev is blocked as well, download `go1.xx.windows-amd64.zip` in the browser and set `$goZip` at the top of the script before pasting.
+
+**From VS Code:** open the unzipped folder, then *Terminal → Run Task…*:
+
+- `yessir: build & install (Go already installed)`: the paste-in block above as a task
+- `yessir: install portable Go + build & install`: runs `install-with-go.ps1`
+- `yessir: test`
+
+Tasks run commands rather than script files, so they work under the same "not digitally signed" policy.
+
 To upgrade, download a fresh ZIP and paste the block again (same install folder, so the hook keeps working).
 
 macOS / Linux from the source ZIP: unzip, `cd yessir-main`, then

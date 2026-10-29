@@ -55,6 +55,24 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit 1 }
           & "$env:RUNNER_TEMP\ybin\yessir.exe" version
 
+  install-with-go:
+    # Simulates a locked-down laptop: no Go on PATH is used (forced download),
+    # and the script is run the way a user pastes it, as a scriptblock.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: paste-style run of scripts/install-with-go.ps1 (Windows PowerShell 5.1)
+        shell: powershell
+        env:
+          YESSIR_FORCE_GO_DOWNLOAD: "1"
+        run: |
+          $dest = "$env:RUNNER_TEMP\ybin"
+          $code = (Get-Content -Raw .\scripts\install-with-go.ps1) -replace '(?m)^\$dest\s*=.*$', "`$dest = '$dest'"
+          & ([scriptblock]::Create($code))
+          & "$dest\yessir.exe" version
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          if (Test-Path "$env:USERPROFILE\.yessir\go") { Write-Error 'temporary Go was not removed'; exit 1 }
+
   npm-package:
     strategy:
       fail-fast: false
